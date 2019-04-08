@@ -3,6 +3,7 @@ import platform
 
 USERNAME = 'rex'
 PLOG_PATH = '/Users/{username}/plog/'.format(username=USERNAME)
+PLOG_FILE = 'plog.plog'
 TESTCASE_PATH = r'testcase/'
 
 

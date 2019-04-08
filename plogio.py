@@ -1,16 +1,33 @@
 import time
+import pickle
 
-from config import PLOG_PATH, TESTCASE_PATH
+from config import PLOG_PATH, PLOG_FILE, TESTCASE_PATH
 from plogclass import PLog, StLog, RpLog, CdLog, PLogDate
 from errors import PLogTypeError
+from toolkit import get_pairs
 
 
-class PLogReader:
+class PlogFile:
+    filename = PLOG_PATH + PLOG_FILE
+
+    def write(self, plog):
+        with open(self.filename, 'ab') as pf:
+            bin1 = pickle.dumps(plog)
+            pf.writelines([bin1])
+
+    def read(self):
+        with open(self.filename, 'rb') as pf:
+            bin1 = pf.readline()
+            record = pickle.loads(bin1)
+            print(record)
+
+    def search(self, **cond):
+        pass
+
+
+class PLogProcessor:
     logs = []
     logs_parsed = []
-
-    def __init__(self):
-        self.logs = []
 
     def blank_filter(self):
         self.logs = [log.strip() for log in self.logs]
@@ -23,35 +40,30 @@ class PLogReader:
         self.blank_filter()
         self.comment_filter()
 
-    def parse(self):
+    def parse(self, log):
+        params = {}
+        words = log.split(' ')
+
+        log_type = words[0]
+        if log_type not in PLog.types:
+            raise PLogTypeError
+
+        params = get_pairs(words[1:])
+        new_log = (log_type, params)
+        return new_log
+
+    def parse_logs(self, logs):
         self.logs_parsed = []
-        for log in self.logs:
-            params = {}
-            words = log.split(' ')
-            if words[0] not in PLog.types:
-                raise PLogTypeError
-
-            log_type = words[0]
-            for i in range(1, len(words)//2+2, 2):
-                params[words[i]] = words[i+1]
-            new_log = (log_type, params)
-
+        for log in logs:
+            new_log = self.parse(log)
             self.logs_parsed.append(new_log)
-
-    def read(self, fp):
-        with open(fp, 'r') as plog_text:
-            self.logs = plog_text.readlines()
-
-        self.preprocessor()
-        self.parse()
-        return self.log_logs()
 
     @staticmethod
     def logit(type, **params):
         log_map = {'st': StLog, 'rp': RpLog, 'cd': CdLog}
         return log_map[type](**params)
 
-    def log_logs(self):
+    def log_plogs(self):
         new_plogs = []
         for log_parsed in self.logs_parsed:
             log_type, params = log_parsed
@@ -59,30 +71,3 @@ class PLogReader:
             new_plogs.append(new_plog)
         return new_plogs
 
-
-class PLogLogger:
-    def __init__(self, fp):
-        self.fp = fp
-
-    def new_doc(self):
-        with open(self.fp) as f:
-            div = "="*20
-            today, weekday = time.strftime('%Y.%m.%d'), time.strftime('%a')
-            f.write("// {div} {today} {weekday} {div}".format(div=div, today=today, weekday=weekday))
-
-    def new_log(self):
-        with open(self.fp) as f:
-            t = time.strftime('%H:%M:%S')
-            f.write("[{t}]".format(t=t))
-
-
-if __name__ == '__main__':
-    """"
-    plog_reader = PLogReader()
-    plogs = plog_reader.read(TESTCASE_PATH+'test.plog')
-
-    plog_date = PLogDate(plogs)
-    print(plog_date)
-    print(plog_date.count('cd'))
-    """
-    print(time.strftime("%a"))
